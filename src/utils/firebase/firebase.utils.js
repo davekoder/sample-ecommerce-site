@@ -3,7 +3,8 @@ import  {
     getAuth, 
     signInWithRedirect, 
     signInWithPopup, 
-    GoogleAuthProvider
+    GoogleAuthProvider,
+    createUserWithEmailAndPassword
 } from 'firebase/auth'
 import {
     getFirestore,
@@ -24,19 +25,21 @@ const firebaseConfig = {
   
 const firebaseApp = initializeApp(firebaseConfig)
 
-const provider = new GoogleAuthProvider() // this is just firebase auth
+const googleProvider = new GoogleAuthProvider() // this is just firebase auth
 // there are other google auth providers, this is the main one
-provider.setCustomParameters({
+googleProvider.setCustomParameters({
     prompt: "select_account"
 })
 
 export const auth = getAuth(); // google implements 1 type of auth
-export const signInWithGooglePopup = () => signInWithPopup(auth, provider)
+export const signInWithGooglePopup = () => signInWithPopup(auth, googleProvider)
+export const signInWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider)
 
 export const db = getFirestore() // variable db now directly points to our firebase database
 
 // this function creates a user document once a user is authenticated
-export const createUserDocumentFromAuth = async (userAuth) => {
+export const createUserDocumentFromAuth = async (userAuth, additionalInformation = {}) => {
+    if(!userAuth) return;
     // to check if there is an existing user document reference --> this reference is an 
     // instance of a document model
     const userDocRef = doc(db, 'users', userAuth.uid)
@@ -54,7 +57,8 @@ export const createUserDocumentFromAuth = async (userAuth) => {
             await setDoc(userDocRef, {
                 displayName,
                 email,
-                createdAt
+                createdAt,
+                ...additionalInformation
             })
         } catch (error) {
             console.log('error creating the user', error.message)
@@ -63,4 +67,9 @@ export const createUserDocumentFromAuth = async (userAuth) => {
     }
 
     return userDocRef
+}
+
+export const createAuthUserWithEmailAndPassword = async (email, password) => {
+    if(!email || !password) return;
+    return await createUserWithEmailAndPassword(auth, email, password)
 }
